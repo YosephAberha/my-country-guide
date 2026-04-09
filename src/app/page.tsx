@@ -53,8 +53,10 @@ export default function HomePage() {
       >
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="text-gradient-gold font-bold text-lg tracking-tight" style={{ fontFamily: "var(--font-playfair), 'Playfair Display', serif" }}>
-              Atlas
+            <span className="font-bold text-lg tracking-tight" style={{ fontFamily: "var(--font-playfair), 'Playfair Display', serif" }}>
+              <span style={{ color: "var(--text-primary)" }}>My</span>
+              <span className="text-gradient-gold">Country</span>
+              <span style={{ color: "var(--text-primary)" }}>Guide</span>
             </span>
           </Link>
 
@@ -214,8 +216,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <span className="text-gradient-gold font-bold text-xl" style={{ fontFamily: "var(--font-playfair), 'Playfair Display', serif" }}>
-                Atlas
+              <span className="font-bold text-xl" style={{ fontFamily: "var(--font-playfair), 'Playfair Display', serif" }}>
+                <span style={{ color: "var(--text-primary)" }}>My</span>
+                <span className="text-gradient-gold">Country</span>
+                <span style={{ color: "var(--text-primary)" }}>Guide</span>
               </span>
               <span className="coord-text hidden sm:inline">
                 Explore Every Nation
@@ -236,7 +240,7 @@ export default function HomePage() {
               ))}
             </nav>
             <div className="coord-text text-center">
-              &copy; {new Date().getFullYear()} Atlas &middot; Data from REST Countries
+              &copy; {new Date().getFullYear()} MyCountryGuide &middot; Data from REST Countries
             </div>
           </div>
           {/* Disclaimer */}

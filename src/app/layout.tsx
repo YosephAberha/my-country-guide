@@ -27,8 +27,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas — Explore Every Nation",
-  description: "An immersive world explorer. Search and discover countries with essential travel, economic, and cultural information.",
+  title: "MyCountryGuide — Explore Every Nation",
+  description: "Your guide to every nation. Search and discover countries with essential travel, economic, and cultural information.",
 };
 
 export default function RootLayout({
