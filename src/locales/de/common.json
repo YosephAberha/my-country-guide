@@ -54,6 +54,7 @@
     "chart_employment": "Beschäftigung & Preise",
     "chart_population": "Bevölkerung & Gesundheit",
     "chart_trade": "Handel & Schulden",
+    "chart_investment": "Auslandsinvestitionen",
     "chart_latest": "Aktuell",
     "section_currency": "Währung",
     "currency": "Währung",
@@ -131,7 +132,34 @@
     "loading": "Wetter wird geladen...",
     "unknown": "Unbekannte Bedingungen",
     "wind": "Wind",
-    "humidity": "Luftfeuchtigkeit"
+    "humidity": "Luftfeuchtigkeit",
+    "forecast_7day": "7-Tage-Vorhersage"
+  },
+  "air_quality": {
+    "title": "Luftqualitätsindex",
+    "loading": "Luftqualität wird geladen...",
+    "pm25": "PM2,5",
+    "pm10": "PM10",
+    "uv": "UV-Index",
+    "level_good": "Gut",
+    "level_fair": "Mäßig gut",
+    "level_moderate": "Mäßig",
+    "level_poor": "Schlecht",
+    "level_very_poor": "Sehr schlecht",
+    "level_hazardous": "Gefährlich",
+    "source": "Europäischer AQI · Open-Meteo Luftqualitäts-API"
+  },
+  "imf": {
+    "section_title": "IWF Wirtschaftsprognosen",
+    "historical": "Historisch",
+    "projected": "Prognose",
+    "source": "Quelle: IWF World Economic Outlook · Gestrichelte Linien zeigen IWF-Prognosen"
+  },
+  "travel_advisory": {
+    "level_1": "Stufe 1: Normale Vorsicht",
+    "level_2": "Stufe 2: Erhöhte Vorsicht",
+    "level_3": "Stufe 3: Reise überdenken",
+    "level_4": "Stufe 4: Nicht reisen"
   },
   "exchange": {
     "loading": "Wechselkurse werden geladen...",

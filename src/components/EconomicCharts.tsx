@@ -38,8 +38,10 @@ const CHART_COLORS = [
   { bg: "rgba(139, 92, 246, 0.12)", border: "rgb(139, 92, 246)" },
 ];
 
+const USD_LARGE = new Set(["NY.GDP.MKTP.CD", "BN.CAB.XOKA.CD", "BX.KLT.DINV.CD.WD"]);
+
 function formatValue(value: number, indicatorId: string): string {
-  if (indicatorId === "NY.GDP.MKTP.CD" || indicatorId === "BN.CAB.XOKA.CD") {
+  if (USD_LARGE.has(indicatorId)) {
     if (Math.abs(value) >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
     if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
     if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
@@ -69,10 +71,26 @@ export default function EconomicCharts({ economics }: EconomicChartsProps) {
   }
 
   const groups = [
-    { label: c.chart_gdp, ids: indicatorIds.filter((id) => id === "NY.GDP.MKTP.CD" || id === "NY.GDP.MKTP.KD.ZG") },
-    { label: c.chart_employment, ids: indicatorIds.filter((id) => id === "SL.UEM.TOTL.ZS" || id === "FP.CPI.TOTL.ZG") },
-    { label: c.chart_population, ids: indicatorIds.filter((id) => id === "SP.POP.TOTL" || id === "SP.DYN.LE00.IN" || id === "SE.ADT.LITR.ZS") },
-    { label: c.chart_trade, ids: indicatorIds.filter((id) => id === "BN.CAB.XOKA.CD" || id === "GC.DOD.TOTL.GD.ZS" || id === "NE.TRD.GNFS.ZS") },
+    {
+      label: c.chart_gdp,
+      ids: indicatorIds.filter((id) => ["NY.GDP.MKTP.CD", "NY.GDP.MKTP.KD.ZG"].includes(id)),
+    },
+    {
+      label: c.chart_employment,
+      ids: indicatorIds.filter((id) => ["SL.UEM.TOTL.ZS", "FP.CPI.TOTL.ZG"].includes(id)),
+    },
+    {
+      label: c.chart_population,
+      ids: indicatorIds.filter((id) => ["SP.POP.TOTL", "SP.DYN.LE00.IN", "SE.ADT.LITR.ZS", "IT.NET.USER.ZS", "SI.POV.GINI"].includes(id)),
+    },
+    {
+      label: c.chart_trade,
+      ids: indicatorIds.filter((id) => ["BN.CAB.XOKA.CD", "GC.DOD.TOTL.GD.ZS", "NE.TRD.GNFS.ZS", "NE.EXP.GNFS.ZS", "NE.IMP.GNFS.ZS"].includes(id)),
+    },
+    {
+      label: c.chart_investment,
+      ids: indicatorIds.filter((id) => ["BX.KLT.DINV.CD.WD"].includes(id)),
+    },
   ].filter((g) => g.ids.length > 0);
 
   const activeIndicator = economics[activeTab];

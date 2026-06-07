@@ -18,12 +18,13 @@ function setCache(key: string, data: unknown, ttl = CACHE_TTL) {
   cache.set(key, { data, expires: Date.now() + ttl });
 }
 
-// Fetch with timeout (AbortController)
+// Fetch with timeout + Next.js persistent cache (revalidates every 24h)
 async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await fetch(url, { signal: controller.signal, next: { revalidate: 86400 } } as any);
     return res;
   } finally {
     clearTimeout(timer);
@@ -70,6 +71,11 @@ async function fetchWorldBankData(countryCode: string) {
     { id: "BN.CAB.XOKA.CD", label: "Current Account Balance" },
     { id: "GC.DOD.TOTL.GD.ZS", label: "Government Debt (% GDP)" },
     { id: "NE.TRD.GNFS.ZS", label: "Trade (% GDP)" },
+    { id: "BX.KLT.DINV.CD.WD", label: "FDI Inflows (USD)" },
+    { id: "NE.EXP.GNFS.ZS", label: "Exports (% GDP)" },
+    { id: "NE.IMP.GNFS.ZS", label: "Imports (% GDP)" },
+    { id: "IT.NET.USER.ZS", label: "Internet Users (%)" },
+    { id: "SI.POV.GINI", label: "Gini Index" },
   ];
 
   const results: Record<
@@ -104,6 +110,98 @@ async function fetchWorldBankData(countryCode: string) {
   await Promise.all(fetches);
   setCache(cacheKey, results);
   return results;
+}
+
+// Fetch IMF World Economic Outlook forecasts (includes projections for current + future years)
+async function fetchIMFData(cca3: string): Promise<Record<string, { label: string; data: { year: number; value: number | null; projected: boolean }[] }> | null> {
+  const cacheKey = `imf:${cca3.toUpperCase()}`;
+  const cached = getCached<Record<string, { label: string; data: { year: number; value: number | null; projected: boolean }[] }>>(cacheKey);
+  if (cached) return cached;
+
+  const indicators = [
+    { id: "NGDP_RPCH", label: "Real GDP Growth (%)" },
+    { id: "PCPIPCH", label: "Inflation, Avg Prices (%)" },
+    { id: "LUR", label: "Unemployment (%)" },
+    { id: "BCA_NGDPD", label: "Current Account (% GDP)" },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
+  try {
+    const res = await fetchWithTimeout(
+      `https://www.imf.org/external/datamapper/api/v1/${indicators.map((i) => i.id).join(",")}/${cca3.toUpperCase()}`,
+      10000,
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+
+    const results: Record<string, { label: string; data: { year: number; value: number | null; projected: boolean }[] }> = {};
+
+    for (const ind of indicators) {
+      const countryData = json.values?.[ind.id]?.[cca3.toUpperCase()];
+      if (!countryData) continue;
+
+      const points = (Object.entries(countryData as Record<string, string | null>) as [string, string | null][])
+        .map(([year, value]) => ({
+          year: parseInt(year),
+          value: value !== null && value !== "" ? parseFloat(value) : null,
+          projected: parseInt(year) >= currentYear,
+        }))
+        .filter((p) => !isNaN(p.year) && p.year >= 2015)
+        .sort((a, b) => a.year - b.year);
+
+      if (points.length > 0) {
+        results[ind.id] = { label: ind.label, data: points };
+      }
+    }
+
+    if (Object.keys(results).length > 0) {
+      setCache(cacheKey, results);
+      return results;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch US State Department travel advisory for a country (level 1–4)
+interface TravelAdvisoryEntry {
+  countryCode: string;
+  advisoryLevel: string;
+  ca_tagline: string;
+  url: string;
+}
+
+async function fetchTravelAdvisory(cca2: string): Promise<{ level: number; message: string; url: string } | null> {
+  const listKey = "travel-advisories-list";
+  let list = getCached<TravelAdvisoryEntry[]>(listKey);
+
+  if (!list) {
+    try {
+      const res = await fetchWithTimeout(
+        "https://travel.state.gov/content/dam/traveldata/travel-advisories/travel-advisories.json",
+        8000,
+      );
+      if (!res.ok) return null;
+      const json = await res.json();
+      list = (json.graph || []) as TravelAdvisoryEntry[];
+      if (list.length > 0) setCache(listKey, list, 3 * 60 * 60 * 1000); // 3h cache for advisory list
+    } catch {
+      return null;
+    }
+  }
+
+  if (!list || list.length === 0) return null;
+
+  const advisory = list.find((a) => a.countryCode?.toUpperCase() === cca2.toUpperCase());
+  if (!advisory) return null;
+
+  return {
+    level: parseInt(advisory.advisoryLevel) || 1,
+    message: advisory.ca_tagline || "",
+    url: advisory.url || "",
+  };
 }
 
 // Religion data by country (common name -> religions)
@@ -667,12 +765,14 @@ export async function GET(
     }
 
     const countryCode = countryData.cca2?.toLowerCase();
+    const cca2 = (countryData.cca2 as string | undefined) || "";
+    const cca3 = (countryData.cca3 as string | undefined) || "";
     const practical = buildPracticalInfo(countryData, locale);
 
-    // Run World Bank fetch + border resolution in parallel
+    // Run all external fetches in parallel
     const borderCodes = countryData.borders as string[] | undefined;
 
-    const [worldBankData, borderNames] = await Promise.all([
+    const [worldBankData, borderNames, imfForecasts, travelAdvisory] = await Promise.all([
       // World Bank indicators
       countryCode ? fetchWorldBankData(countryCode) : Promise.resolve({}),
       // Border name resolution
@@ -698,6 +798,10 @@ export async function GET(
         } catch {}
         return [];
       })(),
+      // IMF World Economic Outlook forecasts
+      cca3 ? fetchIMFData(cca3) : Promise.resolve(null),
+      // US State Dept travel advisory
+      cca2 ? fetchTravelAdvisory(cca2) : Promise.resolve(null),
     ]);
 
     return NextResponse.json({
@@ -725,6 +829,12 @@ export async function GET(
 
       // Macroeconomic
       economics: worldBankData,
+
+      // IMF forward-looking forecasts
+      imfForecasts,
+
+      // US State Dept travel advisory
+      travelAdvisory,
 
       // Practical info
       practical,

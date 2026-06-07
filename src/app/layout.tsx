@@ -27,8 +27,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyCountryGuide — Explore Every Nation",
-  description: "Your guide to every nation. Search and discover countries with essential travel, economic, and cultural information.",
+  title: "MycountryGuide — AI-Powered Market Intelligence Platform",
+  description:
+    "Bilingual market intelligence platform aggregating World Bank economic data with AI-generated country analysis for business professionals.",
+  openGraph: {
+    title: "MycountryGuide — AI-Powered Market Intelligence Platform",
+    description:
+      "Bilingual market intelligence platform aggregating World Bank economic data with AI-generated country analysis for business professionals.",
+    url: "https://mycountryguide.de",
+    siteName: "MycountryGuide",
+    images: [
+      {
+        url: "https://mycountryguide.de/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "MycountryGuide — AI-Powered Market Intelligence Platform",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MycountryGuide — AI-Powered Market Intelligence Platform",
+    description:
+      "Bilingual market intelligence platform aggregating World Bank economic data with AI-generated country analysis for business professionals.",
+    images: ["https://mycountryguide.de/og-image.png"],
+  },
 };
 
 export default function RootLayout({

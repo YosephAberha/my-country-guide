@@ -54,6 +54,7 @@
     "chart_employment": "Employment & Prices",
     "chart_population": "Population & Health",
     "chart_trade": "Trade & Debt",
+    "chart_investment": "FDI",
     "chart_latest": "Latest",
     "section_currency": "Currency",
     "currency": "Currency",
@@ -131,7 +132,34 @@
     "loading": "Loading weather...",
     "unknown": "Unknown conditions",
     "wind": "Wind",
-    "humidity": "Humidity"
+    "humidity": "Humidity",
+    "forecast_7day": "7-Day Forecast"
+  },
+  "air_quality": {
+    "title": "Air Quality Index",
+    "loading": "Loading air quality...",
+    "pm25": "PM2.5",
+    "pm10": "PM10",
+    "uv": "UV Index",
+    "level_good": "Good",
+    "level_fair": "Fair",
+    "level_moderate": "Moderate",
+    "level_poor": "Poor",
+    "level_very_poor": "Very Poor",
+    "level_hazardous": "Hazardous",
+    "source": "European AQI · Open-Meteo Air Quality API"
+  },
+  "imf": {
+    "section_title": "IMF Economic Forecasts",
+    "historical": "Historical",
+    "projected": "Projected",
+    "source": "Source: IMF World Economic Outlook · Dashed lines indicate IMF projections"
+  },
+  "travel_advisory": {
+    "level_1": "Level 1: Normal Precautions",
+    "level_2": "Level 2: Exercise Caution",
+    "level_3": "Level 3: Reconsider Travel",
+    "level_4": "Level 4: Do Not Travel"
   },
   "exchange": {
     "loading": "Loading exchange rates...",

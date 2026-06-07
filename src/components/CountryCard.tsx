@@ -5,11 +5,15 @@ import { useLanguage } from "@/context/LanguageContext";
 import EconomicCharts from "./EconomicCharts";
 import AnimatedSection from "./AnimatedSection";
 import WeatherWidget from "./WeatherWidget";
+import AirQualityWidget from "./AirQualityWidget";
 import ExchangeRateWidget from "./ExchangeRateWidget";
+import IMFForecastsSection from "./IMFForecastsSection";
 import TravelLinks from "./TravelLinks";
 import FavoriteButton from "./FavoriteButton";
 import VisitedButton from "./VisitedButton";
 import ShareButton from "./ShareButton";
+
+interface IMFForecastPoint { year: number; value: number | null; projected: boolean; }
 
 interface CountryPageData {
   name: { common: string; official: string; nativeName?: Record<string, { common: string }> };
@@ -29,6 +33,8 @@ interface CountryPageData {
   unMember?: boolean;
   government?: string;
   economics: Record<string, { label: string; data: { year: number; value: number | null }[] }>;
+  imfForecasts?: Record<string, { label: string; data: IMFForecastPoint[] }> | null;
+  travelAdvisory?: { level: number; message: string; url: string } | null;
   practical: {
     currency: string[];
     currencyCodes: string[];
@@ -65,6 +71,13 @@ function getRegionClass(region: string): string {
   if (r === "antarctic") return "region-badge region-antarctic";
   return "region-badge";
 }
+
+const ADVISORY_COLORS: Record<number, { color: string; bg: string; border: string }> = {
+  1: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.3)" },
+  2: { color: "#eab308", bg: "rgba(234,179,8,0.12)",  border: "rgba(234,179,8,0.3)" },
+  3: { color: "#f97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
+  4: { color: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
+};
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -186,12 +199,32 @@ export default function CountryCard({ data }: { data: CountryPageData }) {
                   {c.un_member}
                 </span>
               )}
+              {data.travelAdvisory && (() => {
+                const adv = data.travelAdvisory!;
+                const col = ADVISORY_COLORS[adv.level] ?? ADVISORY_COLORS[1];
+                const label = t.travel_advisory?.[`level_${adv.level}` as keyof typeof t.travel_advisory] ?? `Level ${adv.level}`;
+                return (
+                  <a
+                    href={adv.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="region-badge flex items-center gap-1"
+                    style={{ background: col.bg, color: col.color, border: `1px solid ${col.border}`, textDecoration: "none" }}
+                    title={adv.message}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    {label}
+                  </a>
+                );
+              })()}
             </div>
           </div>
         </div>
       </AnimatedSection>
 
-      {/* Live Weather */}
+      {/* Live Weather + 7-day forecast */}
       {data.latlng && (
         <AnimatedSection delay={0.03}>
           <WeatherWidget
@@ -199,6 +232,13 @@ export default function CountryCard({ data }: { data: CountryPageData }) {
             lng={data.latlng[1]}
             countryName={data.name.common}
           />
+        </AnimatedSection>
+      )}
+
+      {/* Live Air Quality */}
+      {data.latlng && (
+        <AnimatedSection delay={0.06}>
+          <AirQualityWidget lat={data.latlng[0]} lng={data.latlng[1]} />
         </AnimatedSection>
       )}
 
@@ -271,12 +311,21 @@ export default function CountryCard({ data }: { data: CountryPageData }) {
         </Section>
       </AnimatedSection>
 
-      {/* Macroeconomic Data */}
+      {/* Macroeconomic Data — World Bank historical */}
       <AnimatedSection delay={0.15}>
         <Section title={c.section_economics}>
           <EconomicCharts economics={data.economics} />
         </Section>
       </AnimatedSection>
+
+      {/* IMF Economic Forecasts */}
+      {data.imfForecasts && Object.keys(data.imfForecasts).length > 0 && (
+        <AnimatedSection delay={0.18}>
+          <Section title={t.imf?.section_title ?? "IMF Economic Forecasts"}>
+            <IMFForecastsSection forecasts={data.imfForecasts} />
+          </Section>
+        </AnimatedSection>
+      )}
 
       {/* Currency & Exchange Rates */}
       <AnimatedSection delay={0.2}>
