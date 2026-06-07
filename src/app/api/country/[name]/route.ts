@@ -80,13 +80,15 @@ async function fetchWorldBankData(countryCode: string) {
 
   const results: Record<
     string,
-    { label: string; data: { year: number; value: number | null }[] }
+    { label: string; data: { year: number; value: number | null }[]; lastYear: number }
   > = {};
 
   const fetches = indicators.map(async (ind) => {
     try {
+      // mrv=15 → "most recent 15 values" — always returns the absolute latest
+      // data World Bank has published, regardless of current year
       const res = await fetchWithTimeout(
-        `https://api.worldbank.org/v2/country/${countryCode}/indicator/${ind.id}?format=json&per_page=15&date=2010:2024`,
+        `https://api.worldbank.org/v2/country/${countryCode}/indicator/${ind.id}?format=json&mrv=15`,
         5000,
       );
       if (!res.ok) return;
@@ -101,7 +103,13 @@ async function fetchWorldBankData(countryCode: string) {
         }))
         .sort((a: { year: number }, b: { year: number }) => a.year - b.year);
 
-      results[ind.id] = { label: ind.label, data: points };
+      if (points.length > 0) {
+        results[ind.id] = {
+          label: ind.label,
+          data: points,
+          lastYear: points[points.length - 1].year,
+        };
+      }
     } catch {
       // Skip failed/timed-out indicators
     }
@@ -110,6 +118,69 @@ async function fetchWorldBankData(countryCode: string) {
   await Promise.all(fetches);
   setCache(cacheKey, results);
   return results;
+}
+
+// Parse OECD SDMX-JSON response into time-series points
+function parseSDMX(json: Record<string, unknown>): { period: string; value: number }[] {
+  const datasets = json.dataSets as Array<{ series: Record<string, { observations: Record<string, number[]> }> }> | undefined;
+  if (!datasets?.[0]?.series) return [];
+
+  const seriesKey = Object.keys(datasets[0].series)[0];
+  const observations = datasets[0].series[seriesKey]?.observations;
+  if (!observations) return [];
+
+  const structure = json.structure as { dimensions?: { observation?: Array<{ id: string; values: { id: string }[] }> } } | undefined;
+  const timeDim = structure?.dimensions?.observation?.find((d) => d.id === "TIME_PERIOD");
+  if (!timeDim) return [];
+
+  return timeDim.values
+    .map((t, i) => ({ period: t.id, value: observations[String(i)]?.[0] ?? null }))
+    .filter((p): p is { period: string; value: number } => p.value !== null && !isNaN(p.value));
+}
+
+// Fetch OECD live indicators (quarterly GDP growth, monthly CPI, monthly unemployment)
+// Free, no API key. Only available for the 38 OECD member countries.
+async function fetchOECDData(cca3: string): Promise<{
+  gdpGrowth: { period: string; value: number }[];
+  cpi: { period: string; value: number }[];
+  unemployment: { period: string; value: number }[];
+} | null> {
+  const cacheKey = `oecd:${cca3.toUpperCase()}`;
+  const cached = getCached<{ gdpGrowth: { period: string; value: number }[]; cpi: { period: string; value: number }[]; unemployment: { period: string; value: number }[] }>(cacheKey);
+  if (cached) return cached;
+
+  const iso3 = cca3.toUpperCase();
+  const base = "https://stats.oecd.org/SDMX-JSON/data";
+  const twoYearsAgo = new Date().getFullYear() - 2;
+
+  try {
+    const [gdpRes, cpiRes, uerRes] = await Promise.all([
+      // Quarterly real GDP growth (% change vs previous quarter, seasonally adjusted)
+      fetchWithTimeout(`${base}/QNA/${iso3}.B1_GA.GPSA.Q/OECD?startTimePeriod=${twoYearsAgo}-Q1`, 8000),
+      // Monthly CPI year-on-year change (%)
+      fetchWithTimeout(`${base}/PRICES_CPI/${iso3}.CPALTT01.GY.M/OECD?startTimePeriod=${twoYearsAgo}-01`, 8000),
+      // Monthly unemployment rate (%)
+      fetchWithTimeout(`${base}/STLABOUR/${iso3}.UNRTOT.ST.M/OECD?startTimePeriod=${twoYearsAgo}-01`, 8000),
+    ]);
+
+    const [gdpJson, cpiJson, uerJson] = await Promise.all([
+      gdpRes.ok ? gdpRes.json() : null,
+      cpiRes.ok ? cpiRes.json() : null,
+      uerRes.ok ? uerRes.json() : null,
+    ]);
+
+    const gdpGrowth = gdpJson ? parseSDMX(gdpJson) : [];
+    const cpi = cpiJson ? parseSDMX(cpiJson) : [];
+    const unemployment = uerJson ? parseSDMX(uerJson) : [];
+
+    if (gdpGrowth.length === 0 && cpi.length === 0 && unemployment.length === 0) return null;
+
+    const result = { gdpGrowth, cpi, unemployment };
+    setCache(cacheKey, result, 3 * 60 * 60 * 1000); // 3h — OECD data updates monthly/quarterly
+    return result;
+  } catch {
+    return null;
+  }
 }
 
 // Fetch IMF World Economic Outlook forecasts (includes projections for current + future years)
@@ -772,7 +843,7 @@ export async function GET(
     // Run all external fetches in parallel
     const borderCodes = countryData.borders as string[] | undefined;
 
-    const [worldBankData, borderNames, imfForecasts, travelAdvisory] = await Promise.all([
+    const [worldBankData, borderNames, imfForecasts, travelAdvisory, oecdData] = await Promise.all([
       // World Bank indicators
       countryCode ? fetchWorldBankData(countryCode) : Promise.resolve({}),
       // Border name resolution
@@ -802,6 +873,8 @@ export async function GET(
       cca3 ? fetchIMFData(cca3) : Promise.resolve(null),
       // US State Dept travel advisory
       cca2 ? fetchTravelAdvisory(cca2) : Promise.resolve(null),
+      // OECD live monthly/quarterly indicators (OECD members only)
+      cca3 ? fetchOECDData(cca3) : Promise.resolve(null),
     ]);
 
     return NextResponse.json({
@@ -835,6 +908,9 @@ export async function GET(
 
       // US State Dept travel advisory
       travelAdvisory,
+
+      // OECD live monthly/quarterly data
+      oecdData,
 
       // Practical info
       practical,

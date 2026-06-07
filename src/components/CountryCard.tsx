@@ -8,6 +8,7 @@ import WeatherWidget from "./WeatherWidget";
 import AirQualityWidget from "./AirQualityWidget";
 import ExchangeRateWidget from "./ExchangeRateWidget";
 import IMFForecastsSection from "./IMFForecastsSection";
+import LiveIndicatorsWidget from "./LiveIndicatorsWidget";
 import TravelLinks from "./TravelLinks";
 import FavoriteButton from "./FavoriteButton";
 import VisitedButton from "./VisitedButton";
@@ -35,6 +36,7 @@ interface CountryPageData {
   economics: Record<string, { label: string; data: { year: number; value: number | null }[] }>;
   imfForecasts?: Record<string, { label: string; data: IMFForecastPoint[] }> | null;
   travelAdvisory?: { level: number; message: string; url: string } | null;
+  oecdData?: { gdpGrowth: { period: string; value: number }[]; cpi: { period: string; value: number }[]; unemployment: { period: string; value: number }[] } | null;
   practical: {
     currency: string[];
     currencyCodes: string[];
@@ -310,6 +312,13 @@ export default function CountryCard({ data }: { data: CountryPageData }) {
           {data.government && <InfoRow label={c.demonym} value={data.government.replace("Demonym: ", "")} />}
         </Section>
       </AnimatedSection>
+
+      {/* OECD Live Indicators — monthly/quarterly, far more current than World Bank */}
+      {data.oecdData && (
+        <AnimatedSection delay={0.13}>
+          <LiveIndicatorsWidget oecdData={data.oecdData} />
+        </AnimatedSection>
+      )}
 
       {/* Macroeconomic Data — World Bank historical */}
       <AnimatedSection delay={0.15}>

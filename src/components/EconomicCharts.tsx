@@ -24,6 +24,7 @@ ChartJS.register(
 interface IndicatorData {
   label: string;
   data: { year: number; value: number | null }[];
+  lastYear?: number;
 }
 
 interface EconomicChartsProps {
@@ -122,9 +123,16 @@ export default function EconomicCharts({ economics }: EconomicChartsProps) {
       {/* Chart */}
       {activeIndicator && activeIndicator.data.length > 0 && (
         <div className="rounded-xl p-4" style={{ background: "var(--atlas-surface-alt)", border: "1px solid var(--atlas-border)" }}>
-          <h4 className="text-sm font-bold mb-3" style={{ color: "var(--text-primary)" }}>
-            {activeIndicator.label}
-          </h4>
+          <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+            <h4 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+              {activeIndicator.label}
+            </h4>
+            {activeIndicator.lastYear && (
+              <span className="text-xs coord-text px-2 py-0.5 rounded-full" style={{ background: "var(--atlas-surface)", border: "1px solid var(--atlas-border)", color: "var(--text-tertiary)" }}>
+                {c.data_as_of} {activeIndicator.lastYear} · World Bank
+              </span>
+            )}
+          </div>
           <div className="h-72">
             {activeTab.includes("ZG") || activeTab.includes("ZS") || activeTab === "SP.DYN.LE00.IN" ? (
               <Line

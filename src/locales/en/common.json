@@ -56,6 +56,7 @@
     "chart_trade": "Trade & Debt",
     "chart_investment": "FDI",
     "chart_latest": "Latest",
+    "data_as_of": "Data as of",
     "section_currency": "Currency",
     "currency": "Currency",
     "section_language": "Language & Communication",
@@ -134,6 +135,17 @@
     "wind": "Wind",
     "humidity": "Humidity",
     "forecast_7day": "7-Day Forecast"
+  },
+  "live_indicators": {
+    "title": "Live Economic Indicators",
+    "live_badge": "Live",
+    "gdp_growth": "GDP Growth",
+    "gdp_subtitle": "vs. previous quarter, seasonally adj.",
+    "inflation": "Inflation",
+    "inflation_subtitle": "CPI year-on-year change",
+    "unemployment": "Unemployment Rate",
+    "unemployment_subtitle": "% of labour force",
+    "source": "Source: OECD · Quarterly GDP, Monthly CPI & Unemployment"
   },
   "air_quality": {
     "title": "Air Quality Index",

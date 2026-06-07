@@ -56,6 +56,7 @@
     "chart_trade": "Handel & Schulden",
     "chart_investment": "Auslandsinvestitionen",
     "chart_latest": "Aktuell",
+    "data_as_of": "Daten von",
     "section_currency": "Währung",
     "currency": "Währung",
     "section_language": "Sprache & Kommunikation",
@@ -134,6 +135,17 @@
     "wind": "Wind",
     "humidity": "Luftfeuchtigkeit",
     "forecast_7day": "7-Tage-Vorhersage"
+  },
+  "live_indicators": {
+    "title": "Live-Wirtschaftsindikatoren",
+    "live_badge": "Live",
+    "gdp_growth": "BIP-Wachstum",
+    "gdp_subtitle": "gg. Vorquartal, saisonbereinigt",
+    "inflation": "Inflation",
+    "inflation_subtitle": "VPI-Jahresveränderungsrate",
+    "unemployment": "Arbeitslosenquote",
+    "unemployment_subtitle": "% der Erwerbsbevölkerung",
+    "source": "Quelle: OECD · Quartals-BIP, monatlicher VPI & Arbeitslosigkeit"
   },
   "air_quality": {
     "title": "Luftqualitätsindex",
