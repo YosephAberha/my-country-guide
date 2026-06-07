@@ -23,8 +23,10 @@ async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await fetch(url, { signal: controller.signal, next: { revalidate: 86400 } } as any);
+    // Do NOT pass next: { revalidate } here — combining it with a signal causes
+    // Next.js to buffer the body for its cache before we read it, making the
+    // response unreadable when we call .json(). Use the in-memory Map instead.
+    const res = await fetch(url, { signal: controller.signal });
     return res;
   } finally {
     clearTimeout(timer);
@@ -153,34 +155,37 @@ async function fetchOECDData(cca3: string): Promise<{
   const base = "https://stats.oecd.org/SDMX-JSON/data";
   const twoYearsAgo = new Date().getFullYear() - 2;
 
-  try {
-    const [gdpRes, cpiRes, uerRes] = await Promise.all([
-      // Quarterly real GDP growth (% change vs previous quarter, seasonally adjusted)
-      fetchWithTimeout(`${base}/QNA/${iso3}.B1_GA.GPSA.Q/OECD?startTimePeriod=${twoYearsAgo}-Q1`, 8000),
-      // Monthly CPI year-on-year change (%)
-      fetchWithTimeout(`${base}/PRICES_CPI/${iso3}.CPALTT01.GY.M/OECD?startTimePeriod=${twoYearsAgo}-01`, 8000),
-      // Monthly unemployment rate (%)
-      fetchWithTimeout(`${base}/STLABOUR/${iso3}.UNRTOT.ST.M/OECD?startTimePeriod=${twoYearsAgo}-01`, 8000),
-    ]);
-
-    const [gdpJson, cpiJson, uerJson] = await Promise.all([
-      gdpRes.ok ? gdpRes.json() : null,
-      cpiRes.ok ? cpiRes.json() : null,
-      uerRes.ok ? uerRes.json() : null,
-    ]);
-
-    const gdpGrowth = gdpJson ? parseSDMX(gdpJson) : [];
-    const cpi = cpiJson ? parseSDMX(cpiJson) : [];
-    const unemployment = uerJson ? parseSDMX(uerJson) : [];
-
-    if (gdpGrowth.length === 0 && cpi.length === 0 && unemployment.length === 0) return null;
-
-    const result = { gdpGrowth, cpi, unemployment };
-    setCache(cacheKey, result, 3 * 60 * 60 * 1000); // 3h — OECD data updates monthly/quarterly
-    return result;
-  } catch {
-    return null;
+  // Each request is individually guarded so one failure doesn't kill the others
+  async function safeFetch(url: string): Promise<Record<string, unknown> | null> {
+    try {
+      const res = await fetchWithTimeout(url, 8000);
+      if (!res.ok) return null;
+      return await res.json() as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   }
+
+  const [gdpJson, cpiJson, uerJson] = await Promise.all([
+    safeFetch(`${base}/QNA/${iso3}.B1_GA.GPSA.Q/OECD?startTimePeriod=${twoYearsAgo}-Q1`),
+    safeFetch(`${base}/PRICES_CPI/${iso3}.CPALTT01.GY.M/OECD?startTimePeriod=${twoYearsAgo}-01`),
+    safeFetch(`${base}/STLABOUR/${iso3}.UNRTOT.ST.M/OECD?startTimePeriod=${twoYearsAgo}-01`),
+  ]);
+
+  function safeSDMX(json: Record<string, unknown> | null): { period: string; value: number }[] {
+    if (!json) return [];
+    try { return parseSDMX(json); } catch { return []; }
+  }
+
+  const gdpGrowth    = safeSDMX(gdpJson);
+  const cpi          = safeSDMX(cpiJson);
+  const unemployment = safeSDMX(uerJson);
+
+  if (gdpGrowth.length === 0 && cpi.length === 0 && unemployment.length === 0) return null;
+
+  const result = { gdpGrowth, cpi, unemployment };
+  setCache(cacheKey, result, 3 * 60 * 60 * 1000);
+  return result;
 }
 
 // Fetch IMF World Economic Outlook forecasts (includes projections for current + future years)
